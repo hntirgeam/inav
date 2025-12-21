@@ -328,6 +328,8 @@ static const OSD_Entry menuOsdElemsEntries[] =
 #endif // USE_ADC
 #endif // USE_POWER_LIMITS
 
+    OSD_ELEMENT_ENTRY("CPU LOAD", OSD_CPU_LOAD),
+
     OSD_BACK_AND_END_ENTRY,
 };
 
