@@ -99,6 +99,8 @@
 #include "navigation/navigation.h"
 #include "navigation/navigation_private.h"
 
+#include "scheduler/scheduler.h"
+
 #include "rx/rx.h"
 #include "rx/msp_override.h"
 
@@ -143,6 +145,9 @@
 #define STATS_SCREEN_DISPLAY_TIME 60000 // ms
 
 #define EFFICIENCY_UPDATE_INTERVAL (5 * 1000)
+
+// OSD task frequency (defined in fc_tasks.c)
+#define OSD_TASK_FREQUENCY_HZ 250
 
 // Adjust OSD_MESSAGE's default position when
 // changing OSD_MESSAGE_LENGTH
@@ -5829,6 +5834,15 @@ void osdUpdate(timeUs_t currentTimeUs)
         return;
     }
 
+    // Safety: If system is overloaded, reduce OSD refresh to minimum to preserve CPU for critical tasks
+    static uint8_t overloadSkipCounter = 0;
+    if (isSystemOverloaded()) {
+        if (++overloadSkipCounter < 10) {  // Only update OSD every 10th cycle when overloaded (25 Hz)
+            return;
+        }
+        overloadSkipCounter = 0;
+    }
+
 #if defined(OSD_ALTERNATE_LAYOUT_COUNT) && OSD_ALTERNATE_LAYOUT_COUNT > 0
     // Check if the layout has changed. Higher numbered
     // boxes take priority.
@@ -5870,15 +5884,19 @@ void osdUpdate(timeUs_t currentTimeUs)
     }
 #endif
 
-#define DRAW_FREQ_DENOM     4
 #define STATS_FREQ_DENOM    50
+
+    // Calculate draw frequency divider based on configured framerate
+    // OSD task runs at 250Hz, so we divide by (250 / framerate_hz) to get desired rate
+    const uint8_t drawFreqDenom = MAX(1, OSD_TASK_FREQUENCY_HZ / MAX(1, osdConfig()->framerate_hz));
+
     counter++;
 
     if ((counter % STATS_FREQ_DENOM) == 0 && ARMING_FLAG(ARMED)) {
         osdUpdateStats();
     }
 
-    if ((counter % DRAW_FREQ_DENOM) == 0) {
+    if ((counter % drawFreqDenom) == 0) {
         // redraw values in buffer
         osdRefresh(currentTimeUs);
     } else {

@@ -3278,6 +3278,13 @@ groups:
         max: 600
         type: int16_t
         field: msp_displayport_fullframe_interval
+      - name: osd_framerate_hz
+        description: "OSD screen refresh rate in Hz. Controls how often OSD elements are updated and transmitted to your goggles. Higher values provide faster updates but increase CPU load and bandwidth usage. SAFE: 12-30 Hz. MODERATE: 30-60 Hz (DJI O4). HIGH: 60-100 Hz (may affect performance on slower FCs). System will auto-throttle OSD if CPU overloaded. Check 'tasks' command to monitor system load. Default: 12 Hz."
+        default_value: 12
+        min: 1
+        max: 100
+        type: uint8_t
+        field: framerate_hz
       - name: osd_units
         description: "IMPERIAL, METRIC, UK"
         default_value: "METRIC"

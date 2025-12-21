@@ -69,7 +69,9 @@ typedef enum {          // defines are from hdzero code
     HD_5320            // added to support Avatar and BetaflightHD
 } resolutionType_e;
 
-#define DRAW_FREQ_DENOM 4 // 60Hz
+// OSD task runs at 250Hz (defined in fc_tasks.c)
+// DRAW_FREQ_DENOM is now calculated dynamically based on osd_framerate_hz setting
+#define OSD_TASK_FREQUENCY_HZ 250
 #define TX_BUFFER_SIZE 1024
 #define VTX_TIMEOUT 1000 // 1 second timer
 
@@ -275,7 +277,11 @@ static int drawScreen(displayPort_t *displayPort) // 250Hz
 {
     static uint8_t counter = 0;
 
-    if ((!cmsInMenu && IS_RC_MODE_ACTIVE(BOXOSD)) || (counter++ % DRAW_FREQ_DENOM)) { // 62.5Hz
+    // Calculate draw frequency divider based on configured framerate
+    // OSD task runs at 250Hz, so we divide by (250 / framerate_hz) to get desired rate
+    const uint8_t drawFreqDenom = MAX(1, OSD_TASK_FREQUENCY_HZ / MAX(1, osdConfig()->framerate_hz));
+
+    if ((!cmsInMenu && IS_RC_MODE_ACTIVE(BOXOSD)) || (counter++ % drawFreqDenom)) {
         return 0;
     }
 
