@@ -4260,11 +4260,39 @@ static uint32_t osdCalculateSafeTimeBudget(void)
 void osdDrawNextElement(void)
 {
     static uint8_t elementIndex = 0;
-    // Flag for end of loop, also prevents infinite loop when no elements are enabled
-    uint8_t index = elementIndex;
-    do {
-        elementIndex = osdIncElementIndex(elementIndex);
-    } while (!osdDrawSingleElement(elementIndex) && index != elementIndex);
+    static uint8_t activeElements = 0;
+    static unsigned lastLayout = UINT_MAX;
+
+    // Recount visible elements on layout change
+    if (currentLayout != lastLayout) {
+        lastLayout = currentLayout;
+        activeElements = 0;
+        uint8_t idx = 0;
+        do {
+            idx = osdIncElementIndex(idx);
+            if (OSD_VISIBLE(osdLayoutsConfig()->item_pos[currentLayout][idx])) {
+                activeElements++;
+            }
+        } while (idx > 0);
+    }
+
+    int8_t framerate_hz = osdConfig()->osd_framerate_hz;
+
+    uint8_t elementsPerCycle;
+    if (framerate_hz <= 0 || activeElements == 0) {
+        elementsPerCycle = 1; // legacy: one element per cycle
+    } else {
+        elementsPerCycle = ((uint16_t)activeElements * framerate_hz * 2 + 124) / 125;
+        if (elementsPerCycle < 1) elementsPerCycle = 1;
+        if (elementsPerCycle > activeElements) elementsPerCycle = activeElements;
+    }
+
+    for (uint8_t i = 0; i < elementsPerCycle; i++) {
+        uint8_t index = elementIndex;
+        do {
+            elementIndex = osdIncElementIndex(elementIndex);
+        } while (!osdDrawSingleElement(elementIndex) && index != elementIndex);
+    }
 
     // Draw artificial horizon + tracking telemetry last
     osdDrawSingleElement(OSD_ARTIFICIAL_HORIZON);
